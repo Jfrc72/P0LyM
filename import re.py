@@ -78,6 +78,8 @@ def programa(tokens):
     while tokens:
         comando(tokens)
 
+'holi'
+
 def comando(tokens):
     if tokens[1][0] == 'DEFINITION_VARIABLE':
         analizeDefVariable(tokens)
