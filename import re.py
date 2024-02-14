@@ -27,17 +27,17 @@ def LeerArchivo(file):
 token_patterns = [
     (r'\bdefvar\b', 'DEFINITION_VARIABLE'),
     (r'\b\d+\b', 'NUMBER'),
-    (r':(front|right|left|back)\b', 'DIRECTION'),
+    (r':(front|right|left|back|around)\b', 'DIRECTION'),
     (r':(north|south|west|east)\b', 'ORIENTATION'),
     (r'\b(Dim|myXpos|myYpos|myChips|myBalloons|balloonsHere|ChipsHere|Spaces)\b', 'CONSTANT'),
     (r'=', 'ASSIGNMENT'),
     (r'\(', 'LPAREN'),
     (r'\)', 'RPAREN'),
     (r'(facing\?|blocked\?|can-put\?|can-pick\?|can-move\?|isZero\?|not)', 'CONDITION'), 
-    (r'\b(Dim|myXpos|myYpos|myChips|myBalloons|balloonsHere|ChipsHere|Spaces)\b', 'CONSTANT'),
     (r'\b(if|loop|repeat|defun)\b', 'CONTROL_STRUCTURE'),
     (r':(balloons|chips)\b', 'ITEM_TYPE'),
-    (r'\b(skip|turn|face|put|pick|move-dir|run-dirs|move-face|null)\b', 'COMMAND'),
+    (r'\b(skip|turn|face|put|pick)\b', 'COMMAND1'),
+    (r'\b(move-dir|run-dirs|move-face|null)\b', 'COMMAND2')
     ]
 
 
@@ -80,17 +80,22 @@ def programa(tokens):
         res = comando(tokens, res)
     print(res)
 
+#PREGUNTAS
+# en asignacion la variable es nueva o ya existía
+# en run-dirs debo verificar que el primer elemento de la lista sea el mismo que el ultimo
 
 def comando(tokens, res):
-    if tokens[1][0] == 'DEFINITION_VARIABLE':
+    if tokens[1][0] == "DEFINITION_VARIABLE":
         res = analizeDefVariable(tokens, res)
-    elif tokens[1][0] == 'ASSIGNMENT':
+    elif tokens[1][0] == "ASSIGNMENT":
         res= analizeAsignacion(tokens, res)
-    elif tokens[1][0] == 'COMMAND':
-        res = analizeCommand(tokens, res)
-    elif tokens[1][0] == 'CONTROL_STRUCTURE':
+    elif tokens[1][0] == "COMMAND2":
+        res = analizeCommandComplejo(tokens, res)
+    elif tokens[1][0] == "COMMAND1":
+        res = analizeCommandSimple(tokens, res)
+    elif tokens[1][0] == "CONTROL_STRUCTURE":
         res = control_estructura(tokens)
-    elif tokens[1][0] == 'ELEMENT':
+    elif tokens[1][0] == "ELEMENT":
         res = funcion_llamada(tokens)
     elif tokens[0][0] and tokens[0][1] == "LPAREN":
         pass
@@ -101,26 +106,14 @@ def comando(tokens, res):
 def analizeDefVariable(tokens, res):
     if tokens[0][0] == "LPAREN":
         tokens.pop(0)
-        if tokens[0][0] == 'DEFINITION_VARIABLE':
-            tokens.pop(0)  # Consumir el token DEFINITION_VARIABLE
-            if tokens[0][0] == 'ELEMENT':
-                if tokens[1][0] == 'NUMBER'  or "CONSTANT":
-                    listaVariables.append(tokens[0])
+        tokens.pop(0)
+        if tokens[0][0] == "ELEMENT":
+            if tokens[1][0] == "NUMBER"  or "CONSTANT":
+                listaVariables.append(tokens[0])
+                tokens.pop(0)
+                tokens.pop(0)
+            elif tokens[1][0] == "ELEMENT" and tokens[0][1] in listaVariables:
                     tokens.pop(0)
-                    tokens.pop(0)
-                    if tokens[0][0] == "RPAREN":
-                            tokens.pop(0)
-                    else:
-                        res = False
-
-                elif tokens[1][0] == "ELEMENT" and tokens[0][1] in listaVariables:
-                        tokens.pop(0)  # Consumir el token NUMBER
-                        if tokens[0][0] == "RPAREN":
-                            tokens.pop(0)
-                        else:
-                            res = False
-                else:
-                    res = False
             else:
                 res = False
         else:
@@ -128,39 +121,15 @@ def analizeDefVariable(tokens, res):
     else:
         res = False
 
+    if tokens[0][0] == "RPAREN":
+        tokens.pop(0)
+    else:
+        res = False
     return res
 
-def analizeAsignacion(tokens):
-    if tokens[0][0] == "LPAREN":
-        tokens.pop(0)
-        if tokens[0][0] == 'ASSIGMENT':
-            tokens.pop(0)  # Consumir el token DEFINITION_VARIABLE
-            if tokens[0][0] == 'ELEMENT':
-                tokens.pop(0)  # Consumir el token ELEMENT
-                if tokens[0][0] == 'NUMBER'  or "CONSTANT":
-                    tokens.pop(0)
-                    listaVariables.append(tokens[0])
-                    if tokens[0][0] == "ELEMENT" and tokens[0][1] in listaVariables:
-                        tokens.pop(0)  # Consumir el token NUMBER
-                        if tokens[0][0] == "RPAREN":
-                            tokens.pop(0)
-                        else:
-                            print("False")
-                    else:
-                        print("False")
-                else:
-                    print("False")
-            else:
-                print("False")
-        else:
-            print("False")
-    else:
-        print("False")
-
-        
 
 
-def analizeCommand(tokens, res):
+def analizeCommandSimple(tokens, res):
     if tokens[0][0] == "LPAREN":
         tokens.pop(0)
         if tokens[0][1] == "move" or "skip":
@@ -171,13 +140,86 @@ def analizeCommand(tokens, res):
                 tokens.pop(0)
             else:
                 res = False
-        elif tokens[0][1] == 
+        elif tokens[0][1] == "turn" or "face":
+            if tokens[0][1] == "turn":
+                instruction = "DIRECTION"
+            else:
+                instruction = "ORIENTATION"
+            tokens.pop(0)
+            if tokens[0][0] == instruction:
+                tokens.pop(0)
+            else:
+                res = False
+        elif tokens[0][1] == "put" or "pick":
+            tokens.pop(0)
+            if tokens[0][0] == "ITEM_TYPE":
+                tokens.pop(0)
+                if tokens[0][0] == "NUMBER" or "CONSTANT":
+                    tokens.pop(0)
+                elif tokens[0][0] == "ELEMENT" and tokens[0][1] in listaVariables:
+                    tokens.pop(0)
+                else:
+                    res = False
+            else:
+                res = False
+    else:
+        res = False
+    
+    if tokens[0][0]  == "RPAREN":
+        tokens.pop(0)
+    else:
+        res = False
 
-def analizeConstant():
-    pass
+    return res
+        
 
 
-
+def analizeCommandComplejo(tokens, res):
+    if tokens[0][0] == "LPAREN":
+        tokens.pop(0)
+        
+        if tokens[0][1] == "move-dir" or "move-face":
+            if tokens[0][1] == "move-dir":
+                instruction = "DIRECTION"
+            else:
+                instruction = "ORIENTATION"
+            tokens.pop(0)
+            if tokens[0][0] == "NUMBER" or "CONSTANT":
+                tokens.pop(0)
+                if tokens[0][0] == instruction:
+                    tokens.pop(0)
+                else:
+                    res = False
+            elif tokens[0][0] == "ELEMENT" and tokens[0][1] in listaVariables:
+                tokens.pop(0)
+                if tokens[0][0] == instruction:
+                    tokens.pop(0)
+                else:
+                    res = False
+            else:
+               res = False
+        elif tokens[0][1] == "runs-dirs":
+            tokens.pop(0)
+            lista = True
+            while lista == True:
+                if tokens[0][0] != "DIRECTION":
+                    lista = False
+                else: 
+                    tokens.pop(0)
+        elif tokens[0][1] == "null":
+            pass
+        else:
+            res = False
+        
+    else:
+        res = False
+    
+    if tokens[0][0] == "RPAREN":
+        tokens.pop(0)
+    else:
+        res = False
+    
+    return res
 
 
 
