@@ -5,22 +5,21 @@ def LeerArchivo(file):
 
     with open(file) as fileName:
         lineas = fileName.readlines()
-        for file in lineas:
+        for linea in lineas:
            linea = linea.replace("\n", "")
            linea = linea.replace("\t", "")
            linea = linea.lower()
            if linea.__contains__("(") or linea.__contains__(")"):
                 linea = espaciosParentesis(linea)
-                datos.append(linea)
            if linea.__contains__("="):
                 linea = linea.replace("=", " = ")
            if linea.__contains__(" ?"):
                 linea = linea.replace(" ?", "?")  
            if linea.__contains__(": "):
                linea = linea.replace(": ", ":")
-           
            listaLinea = linea.split()
-           datos.append(listaLinea)
+           if listaLinea != []:
+            datos.append(listaLinea)
 
     return datos
 
@@ -86,13 +85,16 @@ def programa(tokens):
 def comando(tokens, res):
     if tokens[1][0] == "DEFINITION_VARIABLE":
         res, tokens = analizeDefVariable(tokens, res)
+        print("definicion variable" + " ---> " + str(res))
     elif tokens[1][0] == "ASSIGNMENT":
-        pass
-        #res= analizeAsignacion(tokens, res)
+        res, tokens = analizeAsignacion(tokens, res)
+        print("asignacion ---> " + str(res))
     elif tokens[1][0] == "COMMAND2":
-        res = analizeCommandComplejo(tokens, res)
+        res, tokens = analizeCommandComplejo(tokens, res)
+        print("comando2 ---> " + str(res))
     elif tokens[1][0] == "COMMAND1":
         res, tokens = analizeCommandSimple(tokens, res)
+        print("comando1 ---> " + str(res))
     elif tokens[1][0] == "CONTROL_STRUCTURE":
         pass
         #res = control_estructura(tokens)
@@ -114,6 +116,7 @@ def comando(tokens, res):
 
 
 def analizeDefVariable(tokens, res):
+        
     if tokens[0][0] == "LPAREN":
         tokens.pop(0)
         tokens.pop(0)
@@ -135,6 +138,32 @@ def analizeDefVariable(tokens, res):
         tokens.pop(0)
     else:
         res = False
+
+    return res, tokens
+
+def analizeAsignacion(tokens, res):
+    if tokens[0][0] == "LPAREN":
+        tokens.pop(0)
+        tokens.pop(0)
+        if tokens[0][0] == "ELEMENT" and tokens[0][1] in listaVariables:
+            if tokens[1][0] == "NUMBER"  or tokens[1][0] ==  "CONSTANT":
+                listaVariables.append(tokens[0][1])
+                tokens.pop(0)
+                tokens.pop(0)
+            elif tokens[1][0] == "ELEMENT" and tokens[0][1] in listaVariables:
+                tokens.pop(0)
+            else:
+                res = False
+        else:
+            res = False
+    else:
+        res = False
+
+    if tokens[0][0] == "RPAREN":
+        tokens.pop(0)
+    else:
+        res = False
+
     return res, tokens
 
 
@@ -239,20 +268,5 @@ def analizeCommandComplejo(tokens, res):
 
 
 file = input("Por favor escriba la ruta del archivo .txt que desea revisar: ")
-datos = []
-file = file.replace("\n", "")
-file = file.replace("\t", "")
-file = file.lower()
-if file.__contains__("(") or file.__contains__(")"):
-    file = espaciosParentesis(file)
-if file.__contains__("="):
-    file = file.replace("=", " = ")
-if file.__contains__(" ?"):
-    file = file.replace(" ?", "?")  
-if file.__contains__(": "):
-    file = file.replace(": ", ":")
-listaLinea = file.split()
-datos.append(listaLinea)
-#print(listaLinea)
-#print(lexer(datos))
+datos = LeerArchivo(file)
 programa(lexer(datos))
