@@ -73,6 +73,7 @@ def espaciosParentesis(linea):
     return linea
 
 listaVariables = []
+listaFunciones = []
 
 def programa(tokens):
     res = True
@@ -98,11 +99,11 @@ def comando(tokens, res):
         res, tokens = analizeCommandSimple(tokens, res)
         print("comando1 ---> " + str(res))
     elif tokens[1][0] == "CONTROL_STRUCTURE":
-        pass
-        #res = control_estructura(tokens)
+        res, tokens = control_estructura(tokens, res)
+        print("estructura de control ---> " + str(res))
     elif tokens[1][0] == "ELEMENT":
-        pass
-        #res = funcion_llamada(tokens)
+        res = funcion_llamada(tokens, res)
+        print("elemento ---> " + str(res))
     elif tokens[0][0] and tokens[1][0] == "LPAREN":
         tokens.pop(0)
         while tokens[0][0] != "RPAREN" and res == True:
@@ -269,7 +270,7 @@ def analizeCommandComplejo(tokens, res):
 def analizeCondiciones(tokens, res):
     if tokens[0][0] == "LPAREN":
         tokens.pop(0)
-        if tokens[0][0] == "CONDITIONAL":
+        if tokens[0][0] == "CONDITION":
             if tokens[0][1] == "facing?" or tokens[0][1] == "can-move?":
                 tokens.pop(0)
                 if tokens[0][0] == "ORIENTATION":
@@ -314,7 +315,114 @@ def analizeCondiciones(tokens, res):
         res = False
     
     return res, tokens
-                
+
+def control_estructura(tokens, res):
+    if tokens[0][0] == "LPAREN":
+        tokens.pop(0)
+        if tokens[0][0] == "CONTROL_STRUCTURE":
+            tokens.pop(0)
+            if tokens[0][1] == "if":
+                tokens.pop(0)
+                tokens, res = analizeCondiciones(tokens, res)
+                comando(tokens, res)
+            elif tokens[0][1] == "loop":
+                tokens.pop(0)
+                tokens, res = analizeCondiciones(tokens, res)
+                comando(tokens, res)
+            elif tokens[0][1] == "repeat":
+                tokens.pop(0)
+                if tokens[0][0] == "NUMBER" or tokens[0][0] == "CONSTANT" or tokens[0][0] in listaVariables:
+                    tokens.pop(0)
+                    comando(tokens, res)
+                else:
+                    res = False
+            elif tokens[0][1] == "defun":
+                tokens.pop(0)
+                if tokens[0][0] == "ELEMENT":
+                    if tokens[1][0] == "LPAREN":
+                        funcion = tokens[0][1]
+                        tokens.pop(0)
+                        tokens.pop(0)
+                        if tokens[0][0] == "ELEMENT":
+                            elementos = 1
+                            tokens.pop(0)
+                            if tokens[0][0] == "ELEMENT":
+                                elementos += 1
+                                tokens.pop(0)
+                                if tokens[0][0] == "ELEMENT":
+                                    elementos += 1
+                                    tokens.pop(0)
+                                    if tokens[0][0] == "ELEMENT":
+                                        elementos += 1
+                                        tokens.pop(0)
+                                        if tokens[0][0] == "ELEMENT":
+                                            elementos += 1
+                                            tokens.pop(0)
+                                            listaFunciones.append((funcion, elementos))
+                                        else:
+                                            res = False
+                                    else:
+                                        res = False
+                                else:
+                                    res = False
+                            else:
+                                res = False
+                        else:
+                            res = False
+                    else:
+                        res = False
+                else:
+                    res = False
+            else:
+                res = False
+        else:
+            res = False
+    else:
+        res = False
+
+    if tokens[0][0] == "RPAREN":
+        tokens.pop(0)
+    else:
+        res = False
+
+    return res, tokens
+
+def funcion_llamada(tokens, res):
+    if tokens[0][0] == "LPAREN":
+        tokens.pop(0)
+        if tokens[0][0] == "ELEMENT" and tokens[0][0] in listaFunciones:
+            funcion = tokens[0][1]
+            tokens.pop(0)
+            n = funcionYparametros(listaFunciones, funcion)
+            if tokens[0][0] == "LPAREN":
+                tokens.pop(0)
+                for i in range(0, n):
+                    if tokens[0][0] == "NUMBER" or tokens[0][0] == "CONSTANT" or tokens[0][0] in listaVariables:
+                        tokens.pop(0)
+                    else:
+                        res = False
+            else:
+                res = False
+        else:
+            res = False
+    else:
+        res = False
+
+    if tokens[0][0] == "RPAREN":
+        tokens.pop(0)
+    else:
+        res = False
+
+    return res, tokens
+
+def funcionYparametros(listaFunciones, funcion):
+    n = 0
+    while len(listaFunciones) > 0:
+        if listaFunciones[0][0] == funcion:
+            n = len(listaFunciones[0])
+        else:
+            listaFunciones.pop(0)
+    return n
 
 file = input("Por favor escriba la ruta del archivo .txt que desea revisar: ")
 datos = LeerArchivo(file)
