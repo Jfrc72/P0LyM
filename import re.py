@@ -397,7 +397,7 @@ def funcion_llamada(tokens, res):
             if tokens[0][0] == "LPAREN":
                 tokens.pop(0)
                 for i in range(0, n):
-                    if tokens[0][0] == "NUMBER" or tokens[0][0] == "CONSTANT" or tokens[0][0] in listaVariables:
+                    if tokens[i][0] == "NUMBER" or tokens[i][0] == "CONSTANT" or tokens[i][0] in listaVariables:
                         tokens.pop(0)
                     else:
                         res = False
