@@ -26,7 +26,9 @@ def LeerArchivo(file):
 token_patterns = [
     (r'\bdefvar\b', 'DEFINITION_VARIABLE'),
     (r'\b\d+\b', 'NUMBER'),
-    (r':(front|right|left|back|around|up|down)\b', 'DIRECTION'),
+    (r':(front|back)\b', 'DIRECTION1'),
+    (r':(right|left)\b', 'DIRECTION2'),
+    (r':(around)\b', 'DIRECTION3'),
     (r':(north|south|west|east)\b', 'ORIENTATION'),
     (r'\b(Dim|myxpos|myypos|mychips|myballoons|balloonshere|chipshere|spaces)\b', 'CONSTANT'),
     (r'=', 'ASSIGNMENT'),
@@ -181,14 +183,15 @@ def analizeCommandSimple(tokens, res):
                 res = False
         elif tokens[0][1] == "turn" or tokens[0][1] == "face":
             if tokens[0][1] == "turn":
-                instruction = "DIRECTION"
+                instruction = ["DIRECTION2", "DIRECTION3"] 
             else:
-                instruction = "ORIENTATION"
+                instruction = ["ORIENTATION"]
             tokens.pop(0)
-            if tokens[0][0] == instruction:
-                tokens.pop(0)
-            else:
-                res = False
+            for ins in instruction:
+                if tokens[0][0] == ins:
+                    tokens.pop(0)
+                else:
+                    res = False
         elif tokens[0][1] == "put" or tokens[0][1] == "pick":
             tokens.pop(0)
             if tokens[0][0] == "ITEM_TYPE":
@@ -221,16 +224,17 @@ def analizeCommandComplejo(tokens, res):
         
         if tokens[0][1] == "move-dir" or tokens[0][1] == "move-face":
             if tokens[0][1] == "move-dir":
-                instruction = "DIRECTION"
+                instruction = ["DIRECTION1", "DIRECTION2"]
             else:
-                instruction = "ORIENTATION"
+                instruction = ["ORIENTATION"]
             tokens.pop(0)
             if tokens[0][0] == "NUMBER" or tokens[0][0] == "CONSTANT":
                 tokens.pop(0)
-                if tokens[0][0] == instruction:
-                    tokens.pop(0)
-                else:
-                    res = False
+                for ins in instruction:
+                    if tokens[0][0] == ins:
+                        tokens.pop(0)
+                    else:
+                        res = False
             elif tokens[0][0] == "ELEMENT" and tokens[0][1] in listaVariables:
                 tokens.pop(0)
                 if tokens[0][0] == instruction:
@@ -243,12 +247,12 @@ def analizeCommandComplejo(tokens, res):
             tokens.pop(0)
             lista = True
             while lista == True:
-                if tokens[0][0] != "DIRECTION":
+                if tokens[0][0] != "DIRECTION1" or tokens[0][0] != "DIRECTION2" :
                     lista = False
                 else: 
                     tokens.pop(0)
         elif tokens[0][1] == "null":
-            pass
+            tokens.pop(0)
         else:
             res = False
         
@@ -262,10 +266,55 @@ def analizeCommandComplejo(tokens, res):
     
     return res, tokens
 
+def analizeCondiciones(tokens, res):
+    if tokens[0][0] == "LPAREN":
+        tokens.pop(0)
+        if tokens[0][0] == "CONDITIONAL":
+            if tokens[0][1] == "facing?" or tokens[0][1] == "can-move?":
+                tokens.pop(0)
+                if tokens[0][0] == "ORIENTATION":
+                    tokens.pop(0)
+                else:
+                    res = False
+            elif tokens[0][1] == "blocked?":
+                tokens.pop(0)
+            elif tokens[0][1] == "can-put?" or tokens[0][1] == "can-pick?":
+                tokens.pop(0)
+                if tokens[0][0] == "ITEM_TYPE":
+                    tokens.pop(0)
+                    if tokens[0][0] == "NUMBER" or tokens[0][0] == "CONSTANT":
+                        tokens.pop(0)
+                    elif tokens[0][0] == "ELEMENT" and tokens[0][1] in listaVariables:
+                        tokens.pop(0)
+                    else:
+                        res = False
+                else: 
+                    res = False
+            elif tokens[0][1] == "iszero?":
+                tokens.pop(0)
+                if tokens[0][0] == "NUMBER" or tokens[0][0] == "CONSTANT":
+                    tokens.pop(0)
+                elif tokens[0][0] == "ELEMENT" and tokens[0][1] in listaVariables:
+                    tokens.pop(0)
+                else:
+                    res = False
+            elif tokens[0][1] == "not":
+                tokens.pop(0)
+                analizeCondiciones(tokens, res)
+            else:
+                res = False
+        else:
+            res = False
+    else:
+        res = False
 
-
+    if tokens[0][0] == "RPAREN":
+        tokens.pop(0)
+    else:
+        res = False
     
-
+    return res, tokens
+                
 
 file = input("Por favor escriba la ruta del archivo .txt que desea revisar: ")
 datos = LeerArchivo(file)
